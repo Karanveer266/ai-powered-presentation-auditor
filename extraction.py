@@ -1,3 +1,5 @@
+# extraction.py
+
 """
 PowerPoint content extraction with OCR support and validation.
 """
@@ -5,6 +7,7 @@ PowerPoint content extraction with OCR support and validation.
 import logging
 import os
 import re
+import asyncio
 from pathlib import Path
 from typing import List, Optional
 
@@ -12,7 +15,7 @@ from pptx import Presentation
 from PIL import Image
 
 # Note: Table class is accessed through shape.table, not imported directly
-
+# The circular import line that was here has been removed.
 
 logger = logging.getLogger(__name__)
 
@@ -21,30 +24,35 @@ class SlideDoc:
     """Represents a single slide with extracted content."""
     
     def __init__(self, slide_num: int, title: str = "", content: str = "", 
-                 tables: List[str] = None, image_text: str = ""):
+                 tables: List[str] = None, image_text: str = "", notes: str = ""):
         self.slide_num = slide_num
         self.title = title
         self.content = content
         self.tables = tables or []
         self.image_text = image_text
+        self.notes = notes
     
     def get_all_text(self) -> str:
         """Get all text content from the slide."""
         all_text = []
         
         if self.title:
-            all_text.append(self.title)
+            all_text.append(f"Title: {self.title}")
         
         if self.content:
-            all_text.append(self.content)
+            all_text.append(f"Content: {self.content}")
         
         if self.tables:
-            all_text.extend(self.tables)
+            for i, table_text in enumerate(self.tables):
+                all_text.append(f"Table {i+1}:\n{table_text}")
         
         if self.image_text:
-            all_text.append(self.image_text)
+            all_text.append(f"Image Text: {self.image_text}")
+
+        if self.notes:
+            all_text.append(f"Speaker Notes: {self.notes}")
         
-        return "\n".join(all_text)
+        return "\n\n".join(all_text)
     
     def __str__(self):
         return f"Slide {self.slide_num}: {self.title[:50]}..."
@@ -72,9 +80,9 @@ def validate_inputs(pptx_path: str, img_dir: Optional[str] = None) -> None:
     logger.debug("Input validation passed")
 
 
-def extract_presentation_content(pptx_path: str, img_dir: Optional[str] = None, 
-                               gemini_client=None) -> List[SlideDoc]:
-    """Extract comprehensive content from PowerPoint presentation."""
+async def extract_presentation_content(pptx_path: str, img_dir: Optional[str] = None, 
+                                       gemini_client=None) -> List[SlideDoc]:
+    """Extract comprehensive content from PowerPoint presentation asynchronously."""
     logger.info("Starting presentation content extraction")
     
     try:
@@ -83,15 +91,15 @@ def extract_presentation_content(pptx_path: str, img_dir: Optional[str] = None,
         slides = []
         
         for i, slide in enumerate(presentation.slides, 1):
-            logger.debug(f"Processing slide {i}")
+            logger.debug(f"📄 Processing slide {i}")
             
             # Extract basic slide content
             slide_doc = extract_slide_content(slide, i)
             
-            # Add OCR content from images if available
+            # Add OCR content from images if available and a client is provided
             if img_dir and gemini_client:
-                import asyncio
-                image_text = asyncio.run(extract_slide_image_text(i, img_dir, gemini_client))
+                # This now correctly awaits the async function
+                image_text = await extract_slide_image_text(i, img_dir, gemini_client)
                 if image_text:
                     slide_doc.image_text = image_text
             
@@ -101,7 +109,7 @@ def extract_presentation_content(pptx_path: str, img_dir: Optional[str] = None,
         return slides
     
     except Exception as e:
-        logger.error(f"Failed to extract presentation content: {e}")
+        logger.error(f"❌ Failed to extract presentation content: {e}")
         raise
 
 
@@ -110,7 +118,12 @@ def extract_slide_content(slide, slide_num: int) -> SlideDoc:
     title = ""
     content_parts = []
     tables = []
+    notes = ""
     
+    # Extract speaker notes
+    if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+        notes = slide.notes_slide.notes_text_frame.text.strip()
+
     for shape in slide.shapes:
         try:
             # Extract text from text boxes and placeholders
@@ -118,12 +131,13 @@ def extract_slide_content(slide, slide_num: int) -> SlideDoc:
                 text = clean_text(shape.text)
                 
                 # Try to identify title vs content
-                if not title and (
-                    hasattr(shape, 'placeholder_format') and 
-                    shape.placeholder_format and 
-                    hasattr(shape.placeholder_format, 'type') and
-                    shape.placeholder_format.type == 1  # Title placeholder
-                ):
+                is_title = False
+                if hasattr(shape, 'placeholder_format') and shape.placeholder_format.type in [1, 13]: # Title or Centered Title
+                    is_title = True
+                elif shape.is_placeholder and shape.placeholder_format.idx == 0:
+                    is_title = True
+
+                if not title and is_title:
                     title = text
                 else:
                     content_parts.append(text)
@@ -148,7 +162,8 @@ def extract_slide_content(slide, slide_num: int) -> SlideDoc:
         slide_num=slide_num,
         title=title,
         content=content,
-        tables=tables
+        tables=tables,
+        notes=notes
     )
 
 
@@ -156,58 +171,40 @@ def extract_table_text(table) -> str:
     """Extract and format text from a PowerPoint table."""
     try:
         table_rows = []
-        
         for row in table.rows:
-            row_cells = []
-            for cell in row.cells:
-                cell_text = clean_text(cell.text) if cell.text else ""
-                row_cells.append(cell_text)
-            
-            if any(cell.strip() for cell in row_cells):  # Skip empty rows
+            row_cells = [clean_text(cell.text) for cell in row.cells]
+            if any(cell.strip() for cell in row_cells):
                 table_rows.append(" | ".join(row_cells))
-        
-        if table_rows:
-            return "\n".join(table_rows)
-    
+        return "\n".join(table_rows) if table_rows else ""
     except Exception as e:
         logger.debug(f"Error extracting table: {e}")
-    
     return ""
 
 
 async def extract_slide_image_text(slide_num: int, img_dir: str, 
-                                 gemini_client) -> str:
+                                   gemini_client) -> str:
     """Extract text from slide image using OCR."""
     try:
-        # Look for slide image files
         img_path = Path(img_dir)
-        possible_names = [
-            f"slide{slide_num}.png",
-            f"slide{slide_num}.jpg",
-            f"slide{slide_num}.jpeg",
-            f"Slide{slide_num}.png",
-            f"Slide{slide_num}.jpg",
-            f"slide_{slide_num}.png",
-            f"slide_{slide_num}.jpg"
-        ]
-        
         image_file = None
-        for name in possible_names:
-            candidate = img_path / name
-            if candidate.exists():
-                image_file = candidate
+        for ext in ['.png', '.jpg', '.jpeg']:
+            for name_format in [f"slide{slide_num}{ext}", f"Slide{slide_num}{ext}", f"slide_{slide_num}{ext}"]:
+                candidate = img_path / name_format
+                if candidate.exists():
+                    image_file = candidate
+                    break
+            if image_file:
                 break
         
         if not image_file:
             logger.debug(f"No image file found for slide {slide_num}")
             return ""
         
-        # Extract text using Gemini Vision
-        logger.debug(f"Extracting OCR text from {image_file}")
+        logger.debug(f"🖼️ Extracting OCR text from {image_file}")
         image_text = await gemini_client.extract_text_from_image(str(image_file))
         
         if image_text:
-            logger.debug(f"Extracted {len(image_text)} characters from slide {slide_num} image")
+            logger.debug(f"✅ Extracted {len(image_text)} characters from slide {slide_num} image")
             return clean_text(image_text)
     
     except Exception as e:
@@ -220,86 +217,5 @@ def clean_text(text: str) -> str:
     """Clean and normalize extracted text."""
     if not text:
         return ""
-    
-    # Remove excessive whitespace
     text = re.sub(r'\s+', ' ', text)
-    
-    # Remove common artifacts
-    text = re.sub(r'^\d+\s*$', '', text)  # Remove standalone numbers
-    text = re.sub(r'^[^\w\s]*$', '', text)  # Remove lines with only punctuation
-    
-    # Clean up bullet points and formatting
-    text = re.sub(r'^[\u2022\u2023\u25E6\u2043\u2219\-\*]+\s*', '• ', text, flags=re.MULTILINE)
-    
     return text.strip()
-
-
-def get_slide_images(img_dir: str) -> List[str]:
-    """Get list of available slide image files."""
-    if not img_dir:
-        return []
-    
-    img_path = Path(img_dir)
-    if not img_path.exists():
-        return []
-    
-    image_extensions = {'.png', '.jpg', '.jpeg', '.gif', '.bmp'}
-    image_files = []
-    
-    for file_path in img_path.iterdir():
-        if file_path.suffix.lower() in image_extensions:
-            image_files.append(str(file_path))
-    
-    return sorted(image_files)
-
-
-def extract_numbers_from_text(text: str) -> List[str]:
-    """Extract numerical values from text for analysis."""
-    # Enhanced number pattern including currency and percentages
-    number_pattern = re.compile(
-        r'(?:(?:USD?|EUR?|GBP|\$|€|£|Rs\.?)\s*)?'  # Currency prefix
-        r'(-?\d{1,3}(?:,\d{3})*(?:\.\d+)?)'         # Number with commas
-        r'\s*([KMBTkmbt])?'                          # Suffix (K, M, B, T)
-        r'(?:\s*(?:%|percent|USD?|EUR?|GBP|\$|€|£|Rs\.?|hours?|mins?|minutes?|times?|x))?',  # Unit
-        re.IGNORECASE
-    )
-    
-    matches = number_pattern.findall(text)
-    return [match[0] + (match[1] if match[1] else '') for match in matches if match[0]]
-
-
-def extract_percentages_from_text(text: str) -> List[float]:
-    """Extract percentage values from text."""
-    # Pattern for percentages
-    percent_pattern = re.compile(r'(\d+(?:\.\d+)?)\s*(?:%|percent)', re.IGNORECASE)
-    matches = percent_pattern.findall(text)
-    
-    percentages = []
-    for match in matches:
-        try:
-            percentages.append(float(match))
-        except ValueError:
-            continue
-    
-    return percentages
-
-
-def extract_dates_from_text(text: str) -> List[str]:
-    """Extract date references from text."""
-    # Various date patterns
-    date_patterns = [
-        r'\b\d{1,2}/\d{1,2}/\d{2,4}\b',           # MM/DD/YYYY or DD/MM/YYYY
-        r'\b\d{1,2}-\d{1,2}-\d{2,4}\b',           # MM-DD-YYYY or DD-MM-YYYY
-        r'\b\d{4}-\d{1,2}-\d{1,2}\b',             # YYYY-MM-DD
-        r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4}\b',  # Month DD, YYYY
-        r'\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b',    # DD Month YYYY
-        r'\bQ[1-4]\s+\d{4}\b',                     # Q1 2024
-        r'\b\d{4}\b'                              # Just year
-    ]
-    
-    dates = []
-    for pattern in date_patterns:
-        matches = re.findall(pattern, text, re.IGNORECASE)
-        dates.extend(matches)
-    
-    return dates

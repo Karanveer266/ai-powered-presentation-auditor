@@ -1,25 +1,29 @@
-# Free Tier Optimized Configuration
-# Designed to work within Gemini's 10 requests/minute limit
+# config.yaml
 
-# Gemini API Configuration (Free Tier Optimized)
+# Gemini API Configuration
 gemini:
   api_key_env: "GEMINI_API_KEY"
-  model: "gemini-2.0-flash-exp"          # Single model for all tasks
-  request_delay: 8                       # 8 seconds between requests (7.5 requests/minute)
-  max_retries: 2                         # Limited retries
-  quota_wait_time: 60                    # Wait time when quota exceeded
+  model: "gemini-1.5-flash-latest" 
+  request_delay: 2          
+  max_retries: 3
+  quota_wait_time: 60
 
-# System Configuration
+# --- Specific configurations for each detector ---
+detectors:
+  numerical:
+    tolerance_pct: 1 # Allow 1% difference for floating point comparisons
+  textual:
+    similarity_threshold: 0.70 # Lower threshold to catch more potentially related claims
+    confidence_threshold: 0.65 # Minimum AI confidence to report a contradiction
+  percentage:
+    total_tolerance_pp: 2 # Allow a 2 percentage point deviation from 100%
+  timeline:
+    overlap_tolerance_days: 0 # How many days events can overlap before being flagged
+
+# System Configuration (to prevent warnings)
 system:
-  version: "2.1.0-free-tier"
-  optimization: "minimal_api_calls"
-  max_slides_recommended: 20             # Recommended limit for free tier
-  
-# Detection thresholds (optimized for single-pass analysis)
-detection:
-  percentage_tolerance: 2                # Percentage point tolerance
-  confidence_threshold: 0.7              # Minimum confidence for reporting
-  
+  version: "3.0.0"
+
 # Logging
 logging:
   level: "INFO"

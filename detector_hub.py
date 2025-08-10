@@ -94,7 +94,7 @@ class UnifiedDetectorHub:
         logger.info(f"Analyzing {len(slides)} slides (1 API call per slide)")
         
         for i, slide in enumerate(slides):
-            logger.info(f"🔍 Analyzing slide {slide.slide_num} ({i+1}/{len(slides)})")
+            logger.info(f"Analyzing slide {slide.slide_num} ({i+1}/{len(slides)})")
             
             # Get comprehensive analysis for this slide
             analysis = await self._comprehensive_slide_analysis(slide)
