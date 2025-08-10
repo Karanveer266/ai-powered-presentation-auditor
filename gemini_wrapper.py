@@ -50,14 +50,14 @@ class GeminiClient:
             try:
                 if attempt > 0:
                     wait_time = 60  # Wait 1 minute on retry for quota reset
-                    logger.info(f"⏳ Waiting {wait_time}s for quota reset (attempt {attempt + 1})")
+                    logger.info(f"Waiting {wait_time}s for quota reset (attempt {attempt + 1})")
                     await asyncio.sleep(wait_time)
                 
-                logger.debug("🤖 Making API request...")
+                logger.debug("Making API request...")
                 response = self.model.generate_content(prompt)
                 
                 if response and hasattr(response, 'text') and response.text:
-                    logger.debug("✅ API request successful")
+                    logger.debug("API request successful")
                     return response.text.strip()
                 else:
                     raise ValueError("Empty response from Gemini")
@@ -67,21 +67,21 @@ class GeminiClient:
                 
                 # Handle quota errors specifically
                 if 'quota' in error_str or '429' in error_str or 'rate limit' in error_str:
-                    logger.warning(f"🚫 Rate limit hit: {e}")
+                    logger.warning(f"Rate limit hit: {e}")
                     if attempt < self.max_retries - 1:
-                        logger.info("💡 Will retry after quota reset...")
+                        logger.info("Will retry after quota reset...")
                         continue
                     else:
-                        logger.error("❌ Rate limit exceeded. Please wait 1 minute and try again.")
+                        logger.error("Rate limit exceeded. Please wait 1 minute and try again.")
                         raise Exception("Rate limit exceeded. Free tier quota exhausted.")
                 
                 # Handle other errors
                 elif any(term in error_str for term in ['billing', 'permission', 'authentication']):
-                    logger.error(f"❌ API configuration error: {e}")
+                    logger.error(f" API configuration error: {e}")
                     raise
                 
                 else:
-                    logger.warning(f"⚠️ API error (attempt {attempt + 1}): {e}")
+                    logger.warning(f" API error (attempt {attempt + 1}): {e}")
                     if attempt >= self.max_retries - 1:
                         raise
         
@@ -90,7 +90,7 @@ class GeminiClient:
     async def extract_text_from_image(self, image_path: str) -> str:
         """Extract text from image with free tier optimization."""
         try:
-            logger.debug(f"🖼️ Extracting text from: {image_path}")
+            logger.debug(f" Extracting text from: {image_path}")
             
             # Load image
             image_data = self._load_image(image_path)
@@ -105,11 +105,11 @@ class GeminiClient:
 Return clean, structured text preserving hierarchy."""
             
             response = await self.generate_text_with_image(prompt, image_data)
-            logger.debug(f"✅ Extracted {len(response)} characters from image")
+            logger.debug(f"Extracted {len(response)} characters from image")
             return response
         
         except Exception as e:
-            logger.error(f"❌ OCR failed for {image_path}: {e}")
+            logger.error(f" OCR failed for {image_path}: {e}")
             return ""
     
     async def generate_text_with_image(self, prompt: str, image_data: Dict[str, Any]) -> str:

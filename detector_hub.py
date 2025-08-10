@@ -72,7 +72,7 @@ class UnifiedDetectorHub:
 
     async def detect_all_inconsistencies(self, slides: List[SlideDoc]) -> List[Issue]:
         """Perform comprehensive inconsistency detection with minimal API calls."""
-        logger.info("🔍 Starting unified inconsistency detection (optimized for free tier)")
+        logger.info("Starting unified inconsistency detection (optimized for free tier)")
         
         # Step 1: Analyze each slide comprehensively (1 API call per slide)
         slide_data = await self._analyze_all_slides(slides)
@@ -84,14 +84,14 @@ class UnifiedDetectorHub:
         if any(self._combine_metrics(slide_data)): api_calls_made +=1
         if any(self._combine_claims(slide_data)): api_calls_made +=1
         
-        logger.info(f"✅ Analysis complete. Found {len(issues)} issues using ~{api_calls_made} API calls")
+        logger.info(f"Analysis complete. Found {len(issues)} issues using ~{api_calls_made} API calls")
         return issues
     
     async def _analyze_all_slides(self, slides: List[SlideDoc]) -> Dict[int, Dict[str, Any]]:
         """Analyze each slide comprehensively with a single API call per slide."""
         slide_data = {}
         
-        logger.info(f"📊 Analyzing {len(slides)} slides (1 API call per slide)")
+        logger.info(f"Analyzing {len(slides)} slides (1 API call per slide)")
         
         for i, slide in enumerate(slides):
             logger.info(f"🔍 Analyzing slide {slide.slide_num} ({i+1}/{len(slides)})")
@@ -159,11 +159,11 @@ class UnifiedDetectorHub:
             response = await self.gemini_client.generate_text(prompt)
             logger.debug(f"Raw API Response for slide {slide.slide_num}: {response[:300]}...")
             analysis = self._clean_and_parse_json(response)
-            logger.debug(f"✅ Slide {slide.slide_num} analysis complete")
+            logger.debug(f"Slide {slide.slide_num} analysis complete")
             return analysis
         
         except Exception as e:
-            logger.error(f"❌ Failed to analyze slide {slide.slide_num}: {e}")
+            logger.error(f"Failed to analyze slide {slide.slide_num}: {e}")
             return empty_analysis
     
     async def _find_cross_slide_conflicts(self, slide_data: Dict[int, Dict[str, Any]]) -> List[Issue]:

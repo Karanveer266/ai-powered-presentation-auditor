@@ -75,7 +75,7 @@ def validate_inputs(pptx_path: str, img_dir: Optional[str] = None) -> None:
 def extract_presentation_content(pptx_path: str, img_dir: Optional[str] = None, 
                                gemini_client=None) -> List[SlideDoc]:
     """Extract comprehensive content from PowerPoint presentation."""
-    logger.info("🔍 Starting presentation content extraction")
+    logger.info("Starting presentation content extraction")
     
     try:
         # Load PowerPoint presentation
@@ -83,7 +83,7 @@ def extract_presentation_content(pptx_path: str, img_dir: Optional[str] = None,
         slides = []
         
         for i, slide in enumerate(presentation.slides, 1):
-            logger.debug(f"📄 Processing slide {i}")
+            logger.debug(f"Processing slide {i}")
             
             # Extract basic slide content
             slide_doc = extract_slide_content(slide, i)
@@ -97,11 +97,11 @@ def extract_presentation_content(pptx_path: str, img_dir: Optional[str] = None,
             
             slides.append(slide_doc)
         
-        logger.info(f"✅ Extracted content from {len(slides)} slides")
+        logger.info(f"Extracted content from {len(slides)} slides")
         return slides
     
     except Exception as e:
-        logger.error(f"❌ Failed to extract presentation content: {e}")
+        logger.error(f"Failed to extract presentation content: {e}")
         raise
 
 
@@ -203,11 +203,11 @@ async def extract_slide_image_text(slide_num: int, img_dir: str,
             return ""
         
         # Extract text using Gemini Vision
-        logger.debug(f"🖼️ Extracting OCR text from {image_file}")
+        logger.debug(f"Extracting OCR text from {image_file}")
         image_text = await gemini_client.extract_text_from_image(str(image_file))
         
         if image_text:
-            logger.debug(f"✅ Extracted {len(image_text)} characters from slide {slide_num} image")
+            logger.debug(f"Extracted {len(image_text)} characters from slide {slide_num} image")
             return clean_text(image_text)
     
     except Exception as e:

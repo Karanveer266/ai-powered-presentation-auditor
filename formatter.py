@@ -83,10 +83,10 @@ class RichTableFormatter(BaseFormatter):
     def _display_no_issues(self) -> None:
         """Display a message when no issues are found."""
         panel = Panel(
-            "[bold green]✅ No Inconsistencies Detected![/bold green]\n\n"
+            "[bold green]No Inconsistencies Detected![/bold green]\n\n"
             "The presentation appears to be internally consistent.\n"
             "All numerical data, claims, and timelines align properly.",
-            title="🎉 Analysis Complete",
+            title="Analysis Complete",
             border_style="green",
             padding=(1, 2)
         )
@@ -101,7 +101,7 @@ class SimpleFormatter(BaseFormatter):
     def format(self, issues: List[Issue]) -> str:
         """Format issues as simple text and return as string."""
         if not issues:
-            return "✅ No inconsistencies detected!"
+            return "No inconsistencies detected"
         
         output = []
         output.append(f"\n🔍 PowerPoint Inconsistency Detection Results")
@@ -114,7 +114,7 @@ class SimpleFormatter(BaseFormatter):
             output.append(f"   Confidence: {issue.confidence:.1%}")
             output.append(f"   Details: {issue.details}")
         
-        output.append(f"\n✅ Total Issues Found: {len(issues)}")
+        output.append(f"\nTotal Issues Found: {len(issues)}")
         return "\n".join(output)
 
 

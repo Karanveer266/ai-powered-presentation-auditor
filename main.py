@@ -78,28 +78,28 @@ Analysis uses ~{N+2} API calls where N = number of slides.
         
         # Load configuration
         config = load_config(args.config)
-        logger.info("📋 Configuration loaded successfully")
+        logger.info("Configuration loaded successfully")
         
         # Initialize Gemini client
         gemini_client = GeminiClient(config['gemini'])
-        logger.info("🤖 Gemini client initialized")
+        logger.info("Gemini client initialized")
         
         # Extract presentation content
-        logger.info("📄 Extracting presentation content...")
+        logger.info("Extracting presentation content...")
         slides = extract_presentation_content(args.pptx_path, args.images, gemini_client)
-        logger.info(f"✅ Extracted content from {len(slides)} slides")
+        logger.info(f"Extracted content from {len(slides)} slides")
         
         if not slides:
-            logger.error("❌ No slides found or extracted")
+            logger.error("No slides found or extracted")
             return
         
         # Estimate API usage
         estimated_calls = len(slides) + 2
         estimated_time = (estimated_calls * 8) / 60  # 8 seconds between calls
-        logger.info(f"📊 Estimated API usage: {estimated_calls} calls (~{estimated_time:.1f} minutes)")
+        logger.info(f"Estimated API usage: {estimated_calls} calls (~{estimated_time:.1f} minutes)")
         
         # Run unified inconsistency detection
-        logger.info("🔍 Starting comprehensive inconsistency detection...")
+        logger.info("Starting comprehensive inconsistency detection...")
         detector_hub = UnifiedDetectorHub(config, gemini_client)
         issues = await detector_hub.detect_all_inconsistencies(slides)
         
@@ -123,14 +123,14 @@ Analysis uses ~{N+2} API calls where N = number of slides.
         
         # Summary
         if issues:
-            logger.info(f"✅ Analysis complete. Found {len(issues)} inconsistencies.")
+            logger.info(f"Analysis complete. Found {len(issues)} inconsistencies.")
         else:
-            logger.info("✅ Analysis complete. No inconsistencies detected!")
+            logger.info("Analysis complete. No inconsistencies detected!")
     
     except KeyboardInterrupt:
-        logger.info("🛑 Analysis interrupted by user")
+        logger.info("Analysis interrupted by user")
     except Exception as e:
-        logger.error(f"❌ Analysis failed: {e}")
+        logger.error(f"Analysis failed: {e}")
         if args.debug:
             logger.exception("Full error details:")
         sys.exit(1)
