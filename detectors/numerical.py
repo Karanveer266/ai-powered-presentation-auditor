@@ -18,7 +18,7 @@ class NumericalConflictDetector:
         self.number_pattern = re.compile(r'([$€£]?\s*\d[\d,]*\.?\d*\s*(?:[KMBT]|times|x|mins|hours)?)\b', re.IGNORECASE)
 
     async def detect(self, slides: List[SlideDoc]) -> List[Issue]:
-        logger.debug("Batch processing slides for numerical metrics...")
+        logger.debug("Batch processing slides for numerical metrics with few-shot prompting...")
 
         all_numbers = []
         for slide in slides:
@@ -33,19 +33,43 @@ class NumericalConflictDetector:
 
         logger.info(f"Found {len(all_numbers)} numerical data points. Analyzing for conflicts in a single batch...")
 
+        # --- ENHANCED FEW-SHOT PROMPT ---
         prompt = f"""
         Analyze the following list of numerical data points from a presentation.
-        Your task is to identify groups of numbers that refer to the SAME underlying metric but have DIFFERENT values.
+        Your task is to group numbers that refer to the SAME underlying metric and identify if they have DIFFERENT values.
 
-        Data Points: {json.dumps(all_numbers, indent=2)}
+        Data Points:
+        {json.dumps(all_numbers, indent=2)}
 
-        Return a JSON array of conflict objects. Each object must have "metric_name" (a snake_case string) and "conflicting_values" (an array of objects with "value" and "slide_num").
+        Instructions:
+        1.  Group data points by their semantic meaning. For example, "$2M in savings" and "a $3M productivity gain" should be grouped under a metric like "total_productivity_savings_usd". Similarly, "15 mins" and "20 minutes" referring to slide creation time should be grouped.
+        2.  For each group, check if there are conflicting (different) values.
+        3.  Return a JSON array of all the conflicts you find. Each object in the array represents one conflict.
+
+        Here is an example of a perfect response based on hypothetical data:
+        [
+          {{
+            "metric_name": "total_productivity_savings_usd",
+            "conflicting_values": [
+              {{ "value": "$2M", "slide_num": 1 }},
+              {{ "value": "$3M", "slide_num": 2 }}
+            ]
+          }},
+          {{
+            "metric_name": "time_saved_per_slide_minutes",
+            "conflicting_values": [
+              {{ "value": "15 mins", "slide_num": 1 }},
+              {{ "value": "20 mins", "slide_num": 2 }}
+            ]
+          }}
+        ]
+
+        Now, analyze the provided data points and return ONLY a valid JSON array of conflict objects.
         If there are no conflicts, return an empty array [].
         """
-        
+
         response_text = await self.gemini_client.generate_text(prompt)
 
-        # --- GRACEFUL HANDLING OF EMPTY RESPONSE ---
         if not response_text:
             logger.warning("Numerical detector received an empty response from the API. Cannot analyze.")
             return []
