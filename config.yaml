@@ -1,0 +1,26 @@
+# Free Tier Optimized Configuration
+# Designed to work within Gemini's 10 requests/minute limit
+
+# Gemini API Configuration (Free Tier Optimized)
+gemini:
+  api_key_env: "GEMINI_API_KEY"
+  model: "gemini-2.0-flash-exp"          # Single model for all tasks
+  request_delay: 8                       # 8 seconds between requests (7.5 requests/minute)
+  max_retries: 2                         # Limited retries
+  quota_wait_time: 60                    # Wait time when quota exceeded
+
+# System Configuration
+system:
+  version: "2.1.0-free-tier"
+  optimization: "minimal_api_calls"
+  max_slides_recommended: 20             # Recommended limit for free tier
+  
+# Detection thresholds (optimized for single-pass analysis)
+detection:
+  percentage_tolerance: 2                # Percentage point tolerance
+  confidence_threshold: 0.7              # Minimum confidence for reporting
+  
+# Logging
+logging:
+  level: "INFO"
+  api_call_tracking: true

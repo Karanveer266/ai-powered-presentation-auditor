@@ -1,0 +1,32 @@
+# Core dependencies
+python-pptx
+pandas
+Pillow
+pyyaml
+python-dotenv
+
+# Google Gemini AI
+google-generativeai
+
+# Text and date processing
+dateparser
+sentence-transformers
+
+# Output formatting
+rich
+click
+tabulate
+
+# Async support
+asyncio-mqtt
+    
+# Optional dependencies for enhanced functionality
+opencv-python
+pytesseract
+
+# Development dependencies (optional)
+pytest
+pytest-asyncio
+black
+isort
+python-dotenv
