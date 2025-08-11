@@ -88,7 +88,7 @@ python main.py path/to/presentation.pptx --debug
 3. **Text Contradiction Detector**: Identifies logical contradictions in business claims
 4. **Timeline Mismatch Detector**: Detects chronological inconsistencies and conflicting event dates
 
-## 📋 Evaluation Criteria Addressed
+## WHAT IT DOES
 
 ### Accuracy and Completeness of Inconsistency Detection
 
@@ -110,13 +110,6 @@ python main.py path/to/presentation.pptx --debug
 - **Batch Analysis**: Processes multiple slides in batches to minimize API calls
 - **Error Handling**: Robust error handling and retry mechanisms for API calls
 - **Configurable Parameters**: Adjustable thresholds for different presentation types
-
-### Thoughtfulness of Approach and Explanation
-
-- **Strategic Architecture**: Designed for minimal API calls with batch processing
-- **Enhanced Detection Logic**: Sophisticated algorithms for each inconsistency type
-- **Comprehensive Documentation**: Clear explanation of features and functionality
-- **Transparent Limitations**: Honest assessment of current limitations
 
 ## 🛠️ Configuration
 
