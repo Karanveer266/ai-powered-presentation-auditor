@@ -40,8 +40,8 @@ This tool helps users identify inconsistencies in their PowerPoint presentations
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/powerpoint-inconsistency-detector.git
-cd powerpoint-inconsistency-detector
+git clone https://github.com/Karanveer266/ai-powered-presentation-auditor.git
+cd ai-powered-presentation-auditor
 ```
 
 2. Install dependencies:
